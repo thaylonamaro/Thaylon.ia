@@ -16,3 +16,62 @@ bin-release/
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
+#python
+import openai
+import requests
+from io import BytesIO
+
+from twilio.rest import Client
+from twilio.twiml.messaging_response import MessagingResponse
+
+# Configuração do OpenAI
+openai.api_key = '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'
+model_engine = 'text-davinci-002'
+
+# Configuração do Twilio
+account_sid = 'AC27357a62070727260847bdd0256ff648'
+auth_token = '10cfe7cb89d56e0f831523c3f73f0ae1'
+client = Client(account_sid, auth_token)
+whatsapp_number = 'whatsapp:+5516991951799' # Substitua esse número pelo seu próprio número do Twilio
+
+def generate_image(msg_text):
+    # Gerando imagem com base no texto da mensagem usando o serviço de sua escolha.
+    # Aqui vamos usar o serviço Picsum para gerar uma imagem aleatória com a largura e altura definidas na mensagem.
+    # Você pode substituir essa parte do código pelo serviço de sua escolha ou por algum algoritmo de criação mais sofisticado.
+
+    width = 500
+    height = 500
+
+    response = requests.get('https://picsum.photos/%d/%d' % (width, height))
+    img = Image.open(BytesIO(response.content))
+
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype("arial.ttf", 16)
+    draw.text((10, 10), msg_text, font=font)
+
+    return img
+
+def process_message(msg_body):
+    # Processamento da mensagem usando o modelo do OpenAI
+    response = openai.Completion.create(
+        engine=model_engine,
+        prompt=msg_body,
+        max_tokens=2048,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+
+    image_description = response.choices[0].text.strip()
+    return image_description
+
+def generate_response(msg_body):
+    # Gerando imagem e retornando resposta ao usuário
+    image_description = process_message(msg_body)
+    img = generate_image(image_description)
+
+    buffer = BytesIO()
+    img.save(buffer, format='JPEG')
+    buffer.seek(0)
+
+    media_msg = client.messages.create(media_url=[whatsapp_number], media_content_type='image/jpeg', media_base64=str(base64.b64encode(image_bytes), 'utf-8'), to=recipient_number, from_=twilio_number)
